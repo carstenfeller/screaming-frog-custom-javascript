@@ -1,40 +1,89 @@
-# Screaming Frog HTML-to-Markdown Export
+# Screaming Frog HTML to Markdown Export
 
-A small Custom JavaScript snippet for **Screaming Frog SEO Spider** that converts the main rendered content of every crawled page into a separate Markdown file.
+Export the rendered main content of crawled pages from **Screaming Frog SEO Spider** into separate Markdown files.
 
-The script:
+The script is intended for Screaming Frog's **Custom JavaScript** feature and uses [Turndown](https://github.com/mixmark-io/turndown) plus the GFM plugin to convert rendered HTML into GitHub-Flavoured Markdown.
 
-- extracts a configurable content container such as `#main`, `main`, or `article`;
-- converts HTML to GitHub-Flavoured Markdown using Turndown;
-- preserves tables, task lists, links, headings and useful images;
-- adds basic page metadata as YAML frontmatter;
-- can exclude CMS blocks such as calculators, dashboards or browser tools;
-- supports additional site-specific cleanup via CSS selectors;
-- saves one `.md` file per crawled URL.
+It is useful when you want to build a local content corpus for:
 
-## What you need to change
+- content inventories;
+- internal-linking analysis;
+- topic and content-gap research;
+- LLM / RAG workflows;
+- SEO and AI-search analysis;
+- historical content snapshots;
+- migration or QA workflows.
 
-Before running the script, edit the `CONFIG` section at the top of `screaming-frog-html-to-markdown.js`.
+## What it does
+
+For every crawled URL, the script can:
+
+- extract a configurable editorial content container;
+- remove explicitly excluded CMS blocks;
+- remove additional theme-specific elements via CSS selectors;
+- convert HTML to GitHub-Flavoured Markdown;
+- preserve headings, lists, tables, task lists, links and useful images;
+- omit decorative images without alt text;
+- add basic page metadata as YAML frontmatter;
+- save one `.md` file per URL.
+
+Example output:
+
+```yaml
+---
+title: "Technical SEO Guide"
+description: "..."
+h1: "Technical SEO"
+source_url: "https://example.com/guides/technical-seo"
+canonical: "https://example.com/guides/technical-seo"
+robots: "index,follow"
+language: "en"
+crawled_at: "2026-08-15T09:00:00.000Z"
+---
+
+# Technical SEO
+
+Your converted page content starts here.
+```
+
+## Requirements
+
+- Screaming Frog SEO Spider with Custom JavaScript support
+- JavaScript rendering enabled for pages that require it
+- a local output directory that already exists
+- network access to `unpkg.com`, unless you self-host the two JavaScript dependencies
+
+## Quick start
+
+1. Copy `screaming-frog-html-to-markdown.js` into a new Screaming Frog Custom JavaScript snippet.
+2. Edit the `CONFIG` section at the top of the script.
+3. Test it on a few representative URLs.
+4. Run your crawl.
+5. Inspect the generated Markdown before using it as a knowledge corpus.
+
+## Configuration
+
+Four settings deserve attention.
 
 ### 1. `OUTPUT_DIR`
 
-Set an **absolute local path** where Markdown files should be written.
+**Required.** Set an absolute local directory where the Markdown files should be written.
 
 ```js
 const OUTPUT_DIR = '/absolute/path/to/markdown-output';
 ```
 
-Create the directory before starting the crawl.
-
-Example on Linux:
+Linux example:
 
 ```js
 const OUTPUT_DIR = '/home/user/seo-corpus/staging';
 ```
 
+Create the directory before starting the crawl.
+
 ### 2. `CONTENT_SELECTOR`
 
-Set the CSS selector that contains the editorial content you want to export.
+Set the CSS selector that contains the main editorial content.
 
 ```js
 const CONTENT_SELECTOR = '#main';
@@ -48,25 +97,27 @@ const CONTENT_SELECTOR = 'article';
 const CONTENT_SELECTOR = '.page-content';
 ```
 
-Inspect several page templates before choosing the selector. The same selector should ideally work across all relevant page types.
+Inspect several page templates before choosing the selector. A selector that works on only one template will create incomplete exports elsewhere.
 
 ### 3. `EXCLUDE_SELECTOR`
 
-Optional. The default is:
+Optional. Default:
 
 ```js
 const EXCLUDE_SELECTOR = '.corpus-exclude';
 ```
 
-Add this class in your CMS to complete blocks that should not become part of the Markdown corpus, for example:
+This is useful for CMS blocks that should never become part of the Markdown corpus, for example:
 
 - calculators;
 - interactive dashboards;
 - browser-based tools;
-- upload forms;
+- upload interfaces;
 - application UIs.
 
-If you do not need this feature, set:
+If your CMS allows custom CSS classes on content blocks, add `corpus-exclude` to the complete block.
+
+If you do not need this mechanism:
 
 ```js
 const EXCLUDE_SELECTOR = '';
@@ -74,7 +125,7 @@ const EXCLUDE_SELECTOR = '';
 
 ### 4. `CUSTOM_REMOVE_SELECTORS`
 
-Add selectors for repeated theme or navigation elements that are inside your main content container but should not be exported.
+Use this for repeated theme or navigation elements located inside your main content container.
 
 Example:
 
@@ -88,11 +139,15 @@ const CUSTOM_REMOVE_SELECTORS = [
 ];
 ```
 
-These selectors are **site-specific**. Do not copy them blindly; inspect your own HTML.
+These selectors are site-specific. Inspect your own HTML instead of copying selectors blindly.
 
-## Screaming Frog setup
+A fuller example is available in:
 
-Create a new **Custom JavaScript** snippet and use it as an **Extraction** snippet with JavaScript rendering enabled.
+```text
+examples/site-specific-config.js
+```
+
+## External dependencies
 
 The script loads pinned versions of:
 
@@ -101,49 +156,117 @@ The script loads pinned versions of:
 
 from `unpkg.com`.
 
-If external CDN dependencies are not acceptable in your environment, self-host the two JavaScript files and replace `TURNDOWN_URL` and `GFM_PLUGIN_URL`.
+If external CDN dependencies are not suitable for your environment, self-host both JavaScript files and replace:
 
-## Output
-
-A page such as:
-
-```text
-https://example.com/guides/technical-seo
+```js
+const TURNDOWN_URL = '...';
+const GFM_PLUGIN_URL = '...';
 ```
 
-might produce:
+## File naming
+
+Generated filenames use:
+
+```text
+readable-title-slug--short-url-hash.md
+```
+
+Example:
 
 ```text
 technical-seo-guide--8f21c94a.md
 ```
 
-Each file contains YAML frontmatter followed by Markdown:
+The short hash reduces filename collisions. It is not intended to be cryptographically secure.
 
-```yaml
----
-title: "Technical SEO Guide"
-description: "..."
-h1: "Technical SEO"
-source_url: "https://example.com/guides/technical-seo"
-canonical: "https://example.com/guides/technical-seo"
-robots: "index,follow"
-language: "en"
-crawled_at: "2026-08-15T09:00:00.000Z"
----
+For long-lived knowledge bases, you may prefer to rename files in a later post-processing step using stable URL-based identifiers.
+
+## Recommended architecture
+
+Keep extraction and corpus management separate:
+
+```text
+Website
+   ↓
+Screaming Frog
+   ↓
+Raw Markdown
+   ↓
+Post-processing / normalization
+   ↓
+Knowledge corpus / archive / Obsidian / RAG
 ```
 
-The filename combines a readable title-based slug with a short URL-derived hash to reduce filename collisions.
+Screaming Frog should primarily extract reliable raw content.
 
-## Recommended workflow
+More advanced tasks such as these are usually better handled later:
 
-Treat the exported files as **raw crawl data**.
+- stable URL-based filenames;
+- content hashing;
+- change detection;
+- classification;
+- removal of UI-state noise;
+- metadata enrichment;
+- preserving manually maintained frontmatter;
+- historical snapshots;
+- LLM-specific bundles.
 
-For larger knowledge-base or content-corpus workflows, it is usually better to perform further normalization, classification, stable URL-based naming and historical diffing in a separate post-processing step rather than adding more and more site-specific logic to the Screaming Frog extraction script.
+This keeps the crawler script easier to debug and less dependent on one website's theme.
 
-## Notes
+## Important Screaming Frog detail
 
-- The script does not create `OUTPUT_DIR`; create it beforehand.
-- If `CONTENT_SELECTOR` does not match a page, the generated Markdown file contains an explicit error message.
-- Decorative images without alt text are omitted.
-- The short filename hash is only for uniqueness; it is not cryptographic.
-- Test the script on a small set of representative URLs before running a full crawl.
+The file-write action should be returned directly:
+
+```js
+return seoSpider.saveText(
+    result.markdown,
+    filePath,
+    false
+);
+```
+
+Do not assume that `saveText()` behaves like a Promise, and do not replace the return value with `seoSpider.data()` if your goal is to write the file.
+
+## Error handling
+
+If `CONTENT_SELECTOR` does not match a page, the script still writes a Markdown file containing an explicit error message:
+
+```text
+ERROR: No element matched CONTENT_SELECTOR "#main".
+```
+
+This makes incomplete templates easier to identify during QA.
+
+## Before a full crawl
+
+Test at least:
+
+- a normal content page;
+- a long-form article;
+- a page with tables;
+- a page with lists or task lists;
+- a page with interactive UI;
+- every major page template on the site.
+
+Then inspect the Markdown manually.
+
+## Repository structure
+
+```text
+.
+├── screaming-frog-html-to-markdown.js
+├── README.md
+├── LICENSE
+├── CONTRIBUTING.md
+├── .gitignore
+└── examples/
+    └── site-specific-config.js
+```
+
+## License
+
+MIT. See `LICENSE`.
+
+## Disclaimer
+
+This project is an independent utility for use with Screaming Frog SEO Spider. It is not affiliated with or endorsed by Screaming Frog Ltd.
