@@ -79,7 +79,21 @@ Linux example:
 const OUTPUT_DIR = '/home/user/seo-corpus/staging';
 ```
 
-Create the directory before starting the crawl.
+Windows example:
+
+```js
+const OUTPUT_DIR = 'C:/Users/username/seo-corpus/staging';
+```
+
+macOS example:
+
+```js
+const OUTPUT_DIR = '/Users/username/seo-corpus/staging';
+```
+
+Use an absolute path and make sure the directory already exists before starting the crawl.
+
+On Windows, forward slashes are recommended to avoid escaping backslashes in JavaScript strings.
 
 ### 2. `CONTENT_SELECTOR`
 
